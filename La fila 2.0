@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fila Condivisa con Firebase</title>
+</head>
+
+<body>
+  <h1>Fila Condivisa con Firebase</h1>
+  <form id="queue-form">
+    <input type="text" id="name" placeholder="Inserisci il tuo nome" required>
+    <button type="submit">Aggiungi alla fila</button>
+  </form>
+  <ul id="queue-list"></ul>
+  <p id="queue-status">Persone in fila: 0</p>
+
+  <script type="module">
+    // Importa le librerie Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-analytics.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+    import { getDatabase, ref, push, remove, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+
+    // Configurazione Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBuoUzIXM9f75hYoNUANx5KqG3mhi_UuB0",
+      authDomain: "fila-bagno-80ff9.firebaseapp.com",
+      databaseURL: "https://fila-bagno-80ff9-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "fila-bagno-80ff9",
+      storageBucket: "fila-bagno-80ff9.appspot.com",
+      messagingSenderId: "425355361558",
+      appId: "1:425355361558:web:70366f1cc97db48915a437",
+      measurementId: "G-X400E56H9D"
+    };
+
+    // Inizializzazione Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth();
+    const database = getDatabase();
+
+    // Controlla lo stato di autenticazione
+    auth.onAuthStateChanged(function (user) {
+      if (user) {
+        // L'utente è autenticato
+        console.log("Utente autenticato:", user.uid);
+        // Qui puoi eseguire le operazioni di lettura/scrittura nel database
+      } else {
+        // L'utente non è autenticato
+        console.log("Utente non autenticato");
+        // Potresti voler reindirizzare l'utente al processo di autenticazione
+      }
+    });
+
+    const queueForm = document.getElementById("queue-form");
+    const queueList = document.getElementById("queue-list");
+    const queueStatus = document.getElementById("queue-status");
+    const queueRef = ref(database, "fila");
+
+    onChildAdded(queueRef, (childSnapshot) => {
+      const name = childSnapshot.val();
+      const listItem = document.createElement("li");
+      listItem.textContent = name;
+
+      const deleteButton = document.createElement("button");
+      deleteButton.textContent = "Elimina";
+      deleteButton.addEventListener("click", () => {
+        remove(ref(queueRef, childSnapshot.key));
+      });
+
+      listItem.appendChild(deleteButton);
+      queueList.appendChild(listItem);
+    });
+
+    onValue(queueRef, (snapshot) => {
+      const queueArray = [];
+      snapshot.forEach((childSnapshot) => {
+        const name = childSnapshot.val();
+        queueArray.push(name);
+      });
+
+      queueStatus.textContent = "Persone in fila: " + queueArray.length;
+    });
+
+    queueForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById("name");
+      const name = nameInput.value;
+
+      if (name) {
+        push(queueRef, name);
+        nameInput.value = "";
+      }
+    });
+  </script>
+</body>
+
+</html>
